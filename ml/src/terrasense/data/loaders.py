@@ -35,6 +35,10 @@ class DataBundle:
 
 def build_dataloaders(cfg: TrainConfig) -> DataBundle:
     processed = cfg.data_dir / "processed"
+    if not (processed / "splits.json").exists():
+        raise FileNotFoundError(
+            f"No splits found in {processed}. Run `python -m terrasense.data.prepare` first."
+        )
     splits = load_splits(processed / "splits.json")
     stats = ChannelStats.load(processed / "stats.json")
     base = load_eurosat(cfg.data_dir / "raw", download=False)
