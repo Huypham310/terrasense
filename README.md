@@ -12,6 +12,15 @@ api/   FastAPI inference service backed by ONNX Runtime and PostgreSQL
 web/   Next.js + TypeScript frontend
 ```
 
+## Roadmap
+
+- [ ] Data pipeline: download EuroSAT, stratified train/val/test split, augmentation
+- [ ] Models: from-scratch CNN baseline and ResNet-18 transfer learning
+- [ ] Experiment tracking with MLflow, evaluation report, ONNX export
+- [ ] Inference API with prediction history
+- [ ] Web frontend for uploading tiles and browsing results
+- [ ] Tests, Docker Compose, and CI
+
 ## License
 
 MIT
