@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Data and training artifacts
+data/raw/
+data/processed/
+mlruns/
+mlartifacts/
+checkpoints/
+*.pt
+*.pth
+
+# Node
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Env and OS
+.env
+.env.local
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
