@@ -1,0 +1,22 @@
+{
+  "model": "resnet18",
+  "test_accuracy": 0.9818518518518519,
+  "test_macro_f1": 0.9812932402268201,
+  "best_val_accuracy": 0.9855555555555555,
+  "best_epoch": 8,
+  "num_params": 11181642,
+  "cpu_latency_ms": 4.8252524999770685,
+  "test_images": 2700,
+  "per_class_f1": {
+    "AnnualCrop": 0.9700996677740864,
+    "Forest": 1.0,
+    "HerbaceousVegetation": 0.9684908789386402,
+    "Highway": 0.9899799599198397,
+    "Industrial": 0.9900596421471173,
+    "Pasture": 0.972568578553616,
+    "PermanentCrop": 0.9458917835671342,
+    "Residential": 0.994991652754591,
+    "River": 0.9858585858585859,
+    "SeaLake": 0.994991652754591
+  }
+}
