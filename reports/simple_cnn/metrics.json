@@ -1,0 +1,22 @@
+{
+  "model": "simple_cnn",
+  "test_accuracy": 0.9648148148148148,
+  "test_macro_f1": 0.9637384585722749,
+  "best_val_accuracy": 0.9707407407407408,
+  "best_epoch": 15,
+  "num_params": 288746,
+  "cpu_latency_ms": 1.7434124999999767,
+  "test_images": 2700,
+  "per_class_f1": {
+    "AnnualCrop": 0.9446254071661238,
+    "Forest": 0.9950248756218906,
+    "HerbaceousVegetation": 0.9407894736842105,
+    "Highway": 0.9694501018329938,
+    "Industrial": 0.9820359281437125,
+    "Pasture": 0.9554455445544554,
+    "PermanentCrop": 0.9262295081967213,
+    "Residential": 0.9933554817275747,
+    "River": 0.9387755102040817,
+    "SeaLake": 0.991652754590985
+  }
+}
