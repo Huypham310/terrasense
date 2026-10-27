@@ -80,7 +80,8 @@ def train(cfg: TrainConfig, patience: int, limit_batches: int | None = None) -> 
         mlflow.log_param("patience", patience)
         mlflow.log_param("num_params", sum(p.numel() for p in model.parameters()))
 
-        best_acc, bad_epochs = 0.0, 0
+        # -1 so the first epoch always saves a checkpoint, even if val acc is 0
+        best_acc, bad_epochs = -1.0, 0
         for epoch in range(1, cfg.epochs + 1):
             start = time.perf_counter()
             train_loss, train_acc = run_epoch(model, data.train, criterion, optimizer, limit_batches)
