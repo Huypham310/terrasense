@@ -14,6 +14,8 @@ data/raw/
 data/processed/
 mlruns/
 mlartifacts/
+mlflow.db
+artifacts/
 checkpoints/
 *.pt
 *.pth

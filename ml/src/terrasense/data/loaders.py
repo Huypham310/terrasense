@@ -43,6 +43,7 @@ def build_dataloaders(cfg: TrainConfig) -> DataBundle:
     stats = ChannelStats.load(processed / "stats.json")
     base = load_eurosat(cfg.data_dir / "raw", download=False)
 
+    # one base dataset shared by all splits, each split gets its own transform
     def loader(split: str, train: bool) -> DataLoader:
         subset = TransformSubset(base, splits[split], build_transforms(stats, train, cfg.image_size))
         return DataLoader(
@@ -50,6 +51,7 @@ def build_dataloaders(cfg: TrainConfig) -> DataBundle:
             batch_size=cfg.batch_size,
             shuffle=train,
             num_workers=cfg.num_workers,
+            # trên Windows spawn worker rất chậm, giữ worker sống giữa các epoch
             persistent_workers=cfg.num_workers > 0,
         )
 

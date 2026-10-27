@@ -10,6 +10,7 @@ def build_transforms(stats: ChannelStats, train: bool, image_size: int = 64) -> 
     if image_size != 64:
         steps.append(v2.Resize(image_size, antialias=True))
     if train:
+        # augment nhẹ thôi, ảnh 64x64 crop mạnh là mất hết thông tin
         steps += [
             v2.RandomHorizontalFlip(),
             v2.RandomVerticalFlip(),

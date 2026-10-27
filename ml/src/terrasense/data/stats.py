@@ -37,6 +37,7 @@ class _ToTensorDataset(Dataset):
 def compute_channel_stats(dataset: Dataset, indices: list[int], batch_size: int = 512) -> ChannelStats:
     """Per-channel mean/std over the training split only, to avoid leaking val/test statistics."""
     loader = DataLoader(_ToTensorDataset(Subset(dataset, indices)), batch_size=batch_size)
+    # running sums in float64, float32 loses precision over ~88M pixels per channel
     total = torch.zeros(3, dtype=torch.float64)
     total_sq = torch.zeros(3, dtype=torch.float64)
     pixels = 0
@@ -45,5 +46,6 @@ def compute_channel_stats(dataset: Dataset, indices: list[int], batch_size: int 
         total_sq += (batch.double() ** 2).sum(dim=(0, 2, 3))
         pixels += batch.shape[0] * batch.shape[2] * batch.shape[3]
     mean = total / pixels
+    # Var = E[x^2] - E[x]^2, tính 1 lần duyệt là đủ
     std = (total_sq / pixels - mean**2).sqrt()
     return ChannelStats(mean=mean.tolist(), std=std.tolist())
