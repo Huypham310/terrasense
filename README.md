@@ -63,12 +63,37 @@ Transfer learning cuts the test error roughly in half. Most remaining mistakes a
 
 The exported ONNX model matches PyTorch outputs within 1e-6 and runs about 3x faster on CPU, so the API only needs `onnxruntime` instead of the full PyTorch stack.
 
+## API
+
+FastAPI service in `api/` that serves the exported ONNX model with ONNX Runtime (no PyTorch needed at inference time) and keeps a prediction history in SQLite locally or PostgreSQL via `TERRASENSE_DATABASE_URL`.
+
+```bash
+cd api
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Interactive docs at http://localhost:8000/docs.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/health` | Model + database status |
+| GET | `/model` | Model name, classes, input size, test accuracy |
+| POST | `/predict` | Classify one tile (multipart `file`), returns top-3 |
+| POST | `/predict/batch` | Classify up to 16 tiles in one call |
+| GET | `/predictions` | History, newest first (`limit`, `offset`, `label`) |
+| GET | `/predictions/{id}` | One prediction |
+| DELETE | `/predictions/{id}` | Delete a prediction |
+| GET | `/stats` | Counts and average confidence per label |
+
+Uploads are limited to PNG/JPEG/TIFF/WebP and 5 MB (`415` / `413` otherwise); unreadable images return `422`. Settings use the `TERRASENSE_` prefix, see `api/.env.example`.
+
 ## Roadmap
 
 - [x] Data pipeline: download EuroSAT, stratified train/val/test split, augmentation
 - [x] Models: from-scratch CNN baseline and ResNet-18 transfer learning
 - [x] Experiment tracking with MLflow, evaluation report, ONNX export
-- [ ] Inference API with prediction history
+- [x] Inference API with prediction history
 - [ ] Web frontend for uploading tiles and browsing results
 - [ ] Tests, Docker Compose, and CI
 

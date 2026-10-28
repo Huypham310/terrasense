@@ -16,6 +16,7 @@ mlruns/
 mlartifacts/
 mlflow.db
 artifacts/
+terrasense.db
 checkpoints/
 *.pt
 *.pth
