@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ResultCard from "@/components/ResultCard";
 import SampleTiles from "@/components/SampleTiles";
 import { ApiError, predict, type Prediction } from "@/lib/api";
@@ -11,19 +11,32 @@ export default function ClassifyPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [dragging, setDragging] = useState(false);
+  // id of the latest request; slower older responses must not overwrite a newer tile
+  const latestRequest = useRef(0);
+
+  // free the blob URL when the preview changes or the page unmounts
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
 
   async function classify(file: Blob, filename: string) {
+    const requestId = ++latestRequest.current;
     setError(null);
     setResult(null);
     setLoading(true);
     // object URL để hiện ảnh ngay, không cần chờ API
     setPreview(URL.createObjectURL(file));
     try {
-      setResult(await predict(file, filename));
+      const prediction = await predict(file, filename);
+      if (requestId === latestRequest.current) setResult(prediction);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Something went wrong");
+      if (requestId === latestRequest.current) {
+        setError(err instanceof ApiError ? err.message : "Something went wrong");
+      }
     } finally {
-      setLoading(false);
+      if (requestId === latestRequest.current) setLoading(false);
     }
   }
 
