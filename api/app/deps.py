@@ -3,8 +3,14 @@ from collections.abc import Iterator
 from fastapi import HTTPException, Request
 from sqlalchemy.orm import Session
 
+from app.config import Settings
 from app.db import session_scope
 from app.inference import Classifier
+
+
+def get_app_settings(request: Request) -> Settings:
+    """Settings the app was created with (tests pass their own to create_app)."""
+    return request.app.state.settings
 
 
 def get_db(request: Request) -> Iterator[Session]:

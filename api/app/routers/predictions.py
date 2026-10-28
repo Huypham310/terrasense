@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
-from app.deps import get_classifier, get_db
+from app.config import Settings
+from app.deps import get_app_settings, get_classifier, get_db
 from app.inference import Classification, Classifier, InvalidImageError
 from app.models import Prediction
 from app.schemas import PredictionOut, PredictionPage
@@ -15,19 +15,19 @@ router = APIRouter(tags=["predictions"])
 ALLOWED_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/tiff", "image/webp"}
 
 
-async def _read_upload(file: UploadFile) -> bytes:
+async def _read_upload(file: UploadFile, max_mb: float) -> bytes:
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail=f"Unsupported file type '{file.content_type}'",
         )
-    max_bytes = int(get_settings().max_upload_mb * 1024 * 1024)
+    max_bytes = int(max_mb * 1024 * 1024)
     # đọc dư 1 byte để biết file có vượt giới hạn không, khỏi đọc hết file to vào RAM
     data = await file.read(max_bytes + 1)
     if len(data) > max_bytes:
         raise HTTPException(
             status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-            detail=f"File is larger than {get_settings().max_upload_mb:g} MB",
+            detail=f"File is larger than {max_mb:g} MB",
         )
     return data
 
@@ -52,9 +52,10 @@ async def predict(
     file: Annotated[UploadFile, File(description="Satellite tile (PNG/JPEG/TIFF)")],
     db: Annotated[Session, Depends(get_db)],
     classifier: Annotated[Classifier, Depends(get_classifier)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ):
     """Classify one image tile and store the result in the prediction history."""
-    data = await _read_upload(file)
+    data = await _read_upload(file, settings.max_upload_mb)
     try:
         (result,), latency = classifier.predict([data])
     except InvalidImageError as exc:
@@ -70,12 +71,13 @@ async def predict_batch(
     files: Annotated[list[UploadFile], File(description="Up to max_batch_size tiles")],
     db: Annotated[Session, Depends(get_db)],
     classifier: Annotated[Classifier, Depends(get_classifier)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ):
     """Classify several tiles in one ONNX call. Latency is split evenly across the batch."""
-    limit = get_settings().max_batch_size
+    limit = settings.max_batch_size
     if len(files) > limit:
         raise HTTPException(status_code=422, detail=f"At most {limit} files per batch")
-    blobs = [await _read_upload(f) for f in files]
+    blobs = [await _read_upload(f, settings.max_upload_mb) for f in files]
     try:
         results, latency = classifier.predict(blobs)
     except InvalidImageError as exc:
