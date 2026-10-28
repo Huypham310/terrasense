@@ -21,7 +21,15 @@ async def _read_upload(file: UploadFile) -> bytes:
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail=f"Unsupported file type '{file.content_type}'",
         )
-    return await file.read()
+    max_bytes = int(get_settings().max_upload_mb * 1024 * 1024)
+    # đọc dư 1 byte để biết file có vượt giới hạn không, khỏi đọc hết file to vào RAM
+    data = await file.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=f"File is larger than {get_settings().max_upload_mb:g} MB",
+        )
+    return data
 
 
 def _save(
