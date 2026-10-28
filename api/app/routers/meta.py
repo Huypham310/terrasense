@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import func, select, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.deps import get_classifier, get_db
@@ -18,7 +19,7 @@ def health(request: Request, db: Annotated[Session, Depends(get_db)]):
     try:
         db.execute(text("SELECT 1"))
         db_ok = True
-    except Exception:
+    except SQLAlchemyError:
         db_ok = False
     model_ok = getattr(request.app.state, "classifier", None) is not None
     return Health(status="ok" if db_ok and model_ok else "degraded", model_loaded=model_ok, database=db_ok)
