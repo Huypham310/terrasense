@@ -76,5 +76,7 @@ class Classifier:
         for row in probs:
             order = np.argsort(row)[::-1][:k]
             top = [ClassScore(self.class_names[i], float(row[i])) for i in order]
-            results.append(Classification(label=top[0].label, confidence=top[0].probability, top_k=top))
+            results.append(
+                Classification(label=top[0].label, confidence=top[0].probability, top_k=top)
+            )
         return results, elapsed_ms

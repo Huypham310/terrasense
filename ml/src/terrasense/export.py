@@ -74,7 +74,7 @@ def export_onnx(model_name: str) -> dict:
 
 
 def main() -> None:
-    # torch.onnx prints emoji in its progress log; Windows consoles default to cp1252 and crash on it
+    # torch.onnx prints emoji in its progress log; cp1252 Windows consoles crash on it
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")

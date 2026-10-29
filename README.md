@@ -106,6 +106,20 @@ Set `NEXT_PUBLIC_API_URL` to point at a different API.
 
 Confidence tops out around 91-92% even for easy tiles because the model was trained with label smoothing 0.1, which keeps it from being overconfident.
 
+## Testing
+
+| Part | Tests | Coverage | Command |
+| --- | --- | --- | --- |
+| `ml/` (pytest) | 23 | 81% | `cd ml && pytest --cov` |
+| `api/` (pytest) | 25 | 98% | `cd api && pytest --cov` |
+| `web/` (Vitest + Testing Library) | 21 | 71% lines | `cd web && npm run coverage` |
+
+None of the tests need the real dataset or the trained model:
+
+- ML tests run the full train -> evaluate -> ONNX export pipeline on 200 random fake tiles, with MLflow and artifacts redirected to a temp dir.
+- API tests build a ~1 KB ONNX model on the fly (global average pool + linear layer) whose output is predictable from the tile's color, so the expected class is known.
+- Web tests mock the API client and cover the classify flow, error states, history paging/filtering, and delete.
+
 ## Roadmap
 
 - [x] Data pipeline: download EuroSAT, stratified train/val/test split, augmentation
@@ -113,7 +127,8 @@ Confidence tops out around 91-92% even for easy tiles because the model was trai
 - [x] Experiment tracking with MLflow, evaluation report, ONNX export
 - [x] Inference API with prediction history
 - [x] Web frontend for uploading tiles and browsing results
-- [ ] Tests, Docker Compose, and CI
+- [x] Tests with coverage for ml, api and web
+- [ ] Docker Compose and CI
 
 ## License
 
