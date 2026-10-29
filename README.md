@@ -1,5 +1,7 @@
 # TerraSense
 
+[![CI](https://github.com/Huypham310/terrasense/actions/workflows/ci.yml/badge.svg)](https://github.com/Huypham310/terrasense/actions/workflows/ci.yml)
+
 Land-use classification for Sentinel-2 satellite imagery. TerraSense trains convolutional neural networks on the [EuroSAT](https://github.com/phelber/EuroSAT) dataset, tracks experiments with MLflow, exports the best model to ONNX, and serves predictions through a FastAPI service with a Next.js frontend.
 
 ## Repository layout
@@ -106,6 +108,21 @@ Set `NEXT_PUBLIC_API_URL` to point at a different API.
 
 Confidence tops out around 91-92% even for easy tiles because the model was trained with label smoothing 0.1, which keeps it from being overconfident.
 
+## Running with Docker
+
+The trained model is published as a [GitHub release](https://github.com/Huypham310/terrasense/releases/tag/model-v1) so you don't have to retrain:
+
+```bash
+mkdir -p artifacts
+curl -L -o artifacts/model.onnx https://github.com/Huypham310/terrasense/releases/download/model-v1/model.onnx
+curl -L -o artifacts/model_meta.json https://github.com/Huypham310/terrasense/releases/download/model-v1/model_meta.json
+docker compose up --build
+```
+
+This starts Postgres, the API on http://localhost:8000 and the web app on http://localhost:3000. The API image only ships ONNX Runtime (no PyTorch); the web image uses Next.js standalone output.
+
+CI (GitHub Actions) runs lint and the test suites for `ml/`, `api/` and `web/` on every push and pull request.
+
 ## Testing
 
 | Part | Tests | Coverage | Command |
@@ -128,7 +145,7 @@ None of the tests need the real dataset or the trained model:
 - [x] Inference API with prediction history
 - [x] Web frontend for uploading tiles and browsing results
 - [x] Tests with coverage for ml, api and web
-- [ ] Docker Compose and CI
+- [x] Docker Compose and CI
 
 ## License
 
