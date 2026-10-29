@@ -59,7 +59,7 @@ def run_epoch(
 
 
 def train(cfg: TrainConfig, patience: int, limit_batches: int | None = None) -> Path:
-    """Full training loop with early stopping on validation accuracy. Returns the checkpoint path."""
+    """Full training loop with early stopping on val accuracy. Returns the checkpoint path."""
     set_seed(cfg.seed)
     torch.set_num_threads(max(torch.get_num_threads(), 1))
     data = build_dataloaders(cfg)
@@ -67,7 +67,9 @@ def train(cfg: TrainConfig, patience: int, limit_batches: int | None = None) -> 
 
     # label smoothing helps a bit since a few classes look alike (Pasture vs HerbaceousVegetation)
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.learning_rate, weight_decay=cfg.weight_decay)
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=cfg.learning_rate, weight_decay=cfg.weight_decay
+    )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg.epochs)
 
     out_dir = cfg.output_dir / cfg.model
@@ -84,7 +86,9 @@ def train(cfg: TrainConfig, patience: int, limit_batches: int | None = None) -> 
         best_acc, bad_epochs = -1.0, 0
         for epoch in range(1, cfg.epochs + 1):
             start = time.perf_counter()
-            train_loss, train_acc = run_epoch(model, data.train, criterion, optimizer, limit_batches)
+            train_loss, train_acc = run_epoch(
+                model, data.train, criterion, optimizer, limit_batches
+            )
             val_loss, val_acc = run_epoch(model, data.val, criterion, limit_batches=limit_batches)
             lr = scheduler.get_last_lr()[0]
             scheduler.step()
@@ -145,9 +149,7 @@ def main() -> None:
     parser.add_argument("--weight-decay", type=float, default=defaults.weight_decay)
     parser.add_argument("--num-workers", type=int, default=defaults.num_workers)
     parser.add_argument("--patience", type=int, default=3)
-    parser.add_argument(
-        "--limit-batches", type=int, default=None, help="only for quick smoke runs"
-    )
+    parser.add_argument("--limit-batches", type=int, default=None, help="only for quick smoke runs")
     args = parser.parse_args()
 
     cfg = TrainConfig(

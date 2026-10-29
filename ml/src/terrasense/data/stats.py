@@ -34,7 +34,9 @@ class _ToTensorDataset(Dataset):
         return self.to_tensor(image)
 
 
-def compute_channel_stats(dataset: Dataset, indices: list[int], batch_size: int = 512) -> ChannelStats:
+def compute_channel_stats(
+    dataset: Dataset, indices: list[int], batch_size: int = 512
+) -> ChannelStats:
     """Per-channel mean/std over the training split only, to avoid leaking val/test statistics."""
     loader = DataLoader(_ToTensorDataset(Subset(dataset, indices)), batch_size=batch_size)
     # running sums in float64, float32 loses precision over ~88M pixels per channel

@@ -45,7 +45,9 @@ def build_dataloaders(cfg: TrainConfig) -> DataBundle:
 
     # one base dataset shared by all splits, each split gets its own transform
     def loader(split: str, train: bool) -> DataLoader:
-        subset = TransformSubset(base, splits[split], build_transforms(stats, train, cfg.image_size))
+        subset = TransformSubset(
+            base, splits[split], build_transforms(stats, train, cfg.image_size)
+        )
         return DataLoader(
             subset,
             batch_size=cfg.batch_size,
