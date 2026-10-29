@@ -23,4 +23,6 @@ class Prediction(Base):
     top_k: Mapped[list[dict]] = mapped_column(JSON)
     model_name: Mapped[str] = mapped_column(String(64))
     latency_ms: Mapped[float] = mapped_column(Float)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, index=True
+    )

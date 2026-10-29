@@ -66,7 +66,9 @@ async def predict(
     return row
 
 
-@router.post("/predict/batch", response_model=list[PredictionOut], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/predict/batch", response_model=list[PredictionOut], status_code=status.HTTP_201_CREATED
+)
 async def predict_batch(
     files: Annotated[list[UploadFile], File(description="Up to max_batch_size tiles")],
     db: Annotated[Session, Depends(get_db)],
@@ -109,7 +111,9 @@ def list_predictions(
     total = db.scalar(count_query) or 0
     # sort thêm theo id để thứ tự ổn định khi created_at trùng nhau
     items = db.scalars(
-        query.order_by(Prediction.created_at.desc(), Prediction.id.desc()).limit(limit).offset(offset)
+        query.order_by(Prediction.created_at.desc(), Prediction.id.desc())
+        .limit(limit)
+        .offset(offset)
     ).all()
     return PredictionPage(items=items, total=total, limit=limit, offset=offset)
 

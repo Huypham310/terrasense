@@ -22,7 +22,9 @@ def health(request: Request, db: Annotated[Session, Depends(get_db)]):
     except SQLAlchemyError:
         db_ok = False
     model_ok = getattr(request.app.state, "classifier", None) is not None
-    return Health(status="ok" if db_ok and model_ok else "degraded", model_loaded=model_ok, database=db_ok)
+    return Health(
+        status="ok" if db_ok and model_ok else "degraded", model_loaded=model_ok, database=db_ok
+    )
 
 
 @router.get("/model", response_model=ModelInfo)
@@ -47,6 +49,9 @@ def stats(db: Annotated[Session, Depends(get_db)]):
     avg_latency = db.scalar(select(func.avg(Prediction.latency_ms)))
     return Stats(
         total_predictions=total,
-        by_label=[LabelCount(label=l, count=c, avg_confidence=float(a)) for l, c, a in rows],
+        by_label=[
+            LabelCount(label=label, count=count, avg_confidence=float(avg))
+            for label, count, avg in rows
+        ],
         avg_latency_ms=float(avg_latency) if avg_latency is not None else None,
     )
