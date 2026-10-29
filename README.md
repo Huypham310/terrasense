@@ -88,13 +88,31 @@ Interactive docs at http://localhost:8000/docs.
 
 Uploads are limited to PNG/JPEG/TIFF/WebP and 5 MB (`415` / `413` otherwise); unreadable images return `422`. Settings use the `TERRASENSE_` prefix, see `api/.env.example`.
 
+## Web app
+
+Next.js (App Router) + TypeScript + Tailwind frontend in `web/`:
+
+- **Classify**: drag and drop a tile (or pick one of the bundled test-split samples) and see the top-3 classes with confidence bars
+- **History**: paginated prediction history with a label filter and delete
+- **Stats**: predictions per class (Recharts), average latency, and the deployed model's test accuracy
+
+```bash
+cd web
+npm install
+npm run dev        # http://localhost:3000, expects the API on :8000
+```
+
+Set `NEXT_PUBLIC_API_URL` to point at a different API.
+
+Confidence tops out around 91-92% even for easy tiles because the model was trained with label smoothing 0.1, which keeps it from being overconfident.
+
 ## Roadmap
 
 - [x] Data pipeline: download EuroSAT, stratified train/val/test split, augmentation
 - [x] Models: from-scratch CNN baseline and ResNet-18 transfer learning
 - [x] Experiment tracking with MLflow, evaluation report, ONNX export
 - [x] Inference API with prediction history
-- [ ] Web frontend for uploading tiles and browsing results
+- [x] Web frontend for uploading tiles and browsing results
 - [ ] Tests, Docker Compose, and CI
 
 ## License

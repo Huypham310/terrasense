@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class ClassScoreOut(BaseModel):
@@ -19,6 +19,13 @@ class PredictionOut(BaseModel):
     model_name: str
     latency_ms: float
     created_at: datetime
+
+    @field_validator("created_at")
+    @classmethod
+    def _assume_utc(cls, value: datetime) -> datetime:
+        # sqlite trả về datetime không có tzinfo -> browser hiểu nhầm là giờ local
+        # values are always written as UTC, so tag them back before serializing
+        return value if value.tzinfo else value.replace(tzinfo=UTC)
 
 
 class PredictionPage(BaseModel):
