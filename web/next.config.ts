@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // standalone output = small Docker image without the full node_modules
+  output: "standalone",
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
