@@ -4,13 +4,50 @@
 
 Land-use classification for Sentinel-2 satellite imagery. TerraSense trains convolutional neural networks on the [EuroSAT](https://github.com/phelber/EuroSAT) dataset, tracks experiments with MLflow, exports the best model to ONNX, and serves predictions through a FastAPI service with a Next.js frontend.
 
-## Repository layout
+![Classify page](docs/images/classify.png)
 
+## Highlights
+
+- **98.19% test accuracy** (macro F1 0.981) on 2,700 held-out EuroSAT tiles with a fine-tuned ResNet-18, vs 96.48% for a 289K-parameter CNN trained from scratch
+- **1.5 ms per tile on CPU** with ONNX Runtime, ~3x faster than PyTorch, with outputs matching within 1e-6
+- **API image without PyTorch**: inference only needs `onnxruntime`, the model ships as a [GitHub release](https://github.com/Huypham310/terrasense/releases/tag/model-v1)
+- **69 automated tests** across the training package (81% coverage), API (98%) and web app (71%), run by GitHub Actions on every push
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph training [ml - offline]
+        eurosat[EuroSAT tiles] --> prepare[prepare: stratified splits + stats]
+        prepare --> train[train: SimpleCNN / ResNet-18]
+        train --> mlflow[(MLflow runs)]
+        train --> evaluate[evaluate: metrics + confusion matrix]
+        train --> export[export: ONNX + metadata]
+    end
+    export --> onnx[model.onnx]
+    subgraph serving [docker compose]
+        web[Next.js web app] -->|REST| api[FastAPI + ONNX Runtime]
+        api --> db[(PostgreSQL)]
+    end
+    onnx --> api
 ```
-ml/    PyTorch training package (data pipeline, models, training, evaluation, export)
-api/   FastAPI inference service backed by ONNX Runtime and PostgreSQL
-web/   Next.js + TypeScript frontend
+
+| Folder | What it is | Stack |
+| --- | --- | --- |
+| `ml/` | Data pipeline, models, training, evaluation, ONNX export | PyTorch, torchvision, scikit-learn, MLflow, ONNX |
+| `api/` | Inference service with prediction history | FastAPI, ONNX Runtime, SQLAlchemy, PostgreSQL |
+| `web/` | Upload, history and stats pages | Next.js (App Router), TypeScript, Tailwind, Recharts |
+
+## Quick start (Docker)
+
+```bash
+mkdir -p artifacts
+curl -L -o artifacts/model.onnx https://github.com/Huypham310/terrasense/releases/download/model-v1/model.onnx
+curl -L -o artifacts/model_meta.json https://github.com/Huypham310/terrasense/releases/download/model-v1/model_meta.json
+docker compose up --build
 ```
+
+This starts Postgres, the API on http://localhost:8000 (docs at `/docs`) and the web app on http://localhost:3000. The web image uses Next.js standalone output.
 
 ## Dataset
 
@@ -48,7 +85,7 @@ python -m terrasense.evaluate --model resnet18
 python -m terrasense.export --model resnet18
 ```
 
-Training uses AdamW, cosine LR decay, label smoothing 0.1 and early stopping on validation accuracy. Every run is logged to MLflow (`mlflow.db` + `mlruns/`); browse them with `mlflow ui --backend-store-uri sqlite:///mlflow.db`.
+Training uses AdamW, cosine LR decay, label smoothing 0.1 and early stopping on validation accuracy. Every run is logged to MLflow (`mlflow.db` + `mlruns/`); browse them with `mlflow ui --backend-store-uri sqlite:///mlflow.db`. On a 12-thread laptop CPU, ResNet-18 trains in about 8 minutes and the baseline in about 19.
 
 ## Results
 
@@ -63,19 +100,15 @@ Transfer learning cuts the test error roughly in half. Most remaining mistakes a
 
 ![ResNet-18 confusion matrix](reports/resnet18/confusion_matrix.png)
 
-The exported ONNX model matches PyTorch outputs within 1e-6 and runs about 3x faster on CPU, so the API only needs `onnxruntime` instead of the full PyTorch stack.
+Full metrics, including per-class F1, are in `reports/<model>/metrics.json`.
 
 ## API
-
-FastAPI service in `api/` that serves the exported ONNX model with ONNX Runtime (no PyTorch needed at inference time) and keeps a prediction history in SQLite locally or PostgreSQL via `TERRASENSE_DATABASE_URL`.
 
 ```bash
 cd api
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
-
-Interactive docs at http://localhost:8000/docs.
 
 | Method | Path | Description |
 | --- | --- | --- |
@@ -88,15 +121,9 @@ Interactive docs at http://localhost:8000/docs.
 | DELETE | `/predictions/{id}` | Delete a prediction |
 | GET | `/stats` | Counts and average confidence per label |
 
-Uploads are limited to PNG/JPEG/TIFF/WebP and 5 MB (`415` / `413` otherwise); unreadable images return `422`. Settings use the `TERRASENSE_` prefix, see `api/.env.example`.
+Uploads are limited to PNG/JPEG/TIFF/WebP and 5 MB (`415` / `413` otherwise); unreadable images return `422`. The database is SQLite by default and PostgreSQL via `TERRASENSE_DATABASE_URL`; see `api/.env.example` for all settings.
 
 ## Web app
-
-Next.js (App Router) + TypeScript + Tailwind frontend in `web/`:
-
-- **Classify**: drag and drop a tile (or pick one of the bundled test-split samples) and see the top-3 classes with confidence bars
-- **History**: paginated prediction history with a label filter and delete
-- **Stats**: predictions per class (Recharts), average latency, and the deployed model's test accuracy
 
 ```bash
 cd web
@@ -104,24 +131,11 @@ npm install
 npm run dev        # http://localhost:3000, expects the API on :8000
 ```
 
-Set `NEXT_PUBLIC_API_URL` to point at a different API.
+| History | Stats |
+| --- | --- |
+| ![History page](docs/images/history.png) | ![Stats page](docs/images/stats.png) |
 
-Confidence tops out around 91-92% even for easy tiles because the model was trained with label smoothing 0.1, which keeps it from being overconfident.
-
-## Running with Docker
-
-The trained model is published as a [GitHub release](https://github.com/Huypham310/terrasense/releases/tag/model-v1) so you don't have to retrain:
-
-```bash
-mkdir -p artifacts
-curl -L -o artifacts/model.onnx https://github.com/Huypham310/terrasense/releases/download/model-v1/model.onnx
-curl -L -o artifacts/model_meta.json https://github.com/Huypham310/terrasense/releases/download/model-v1/model_meta.json
-docker compose up --build
-```
-
-This starts Postgres, the API on http://localhost:8000 and the web app on http://localhost:3000. The API image only ships ONNX Runtime (no PyTorch); the web image uses Next.js standalone output.
-
-CI (GitHub Actions) runs lint and the test suites for `ml/`, `api/` and `web/` on every push and pull request.
+Set `NEXT_PUBLIC_API_URL` to point at a different API. Confidence tops out around 91-92% even for easy tiles because the model was trained with label smoothing 0.1, which keeps it from being overconfident.
 
 ## Testing
 
@@ -137,15 +151,18 @@ None of the tests need the real dataset or the trained model:
 - API tests build a ~1 KB ONNX model on the fly (global average pool + linear layer) whose output is predictable from the tile's color, so the expected class is known.
 - Web tests mock the API client and cover the classify flow, error states, history paging/filtering, and delete.
 
-## Roadmap
+GitHub Actions runs ruff/ESLint/tsc and all three suites on every push and pull request.
 
-- [x] Data pipeline: download EuroSAT, stratified train/val/test split, augmentation
-- [x] Models: from-scratch CNN baseline and ResNet-18 transfer learning
-- [x] Experiment tracking with MLflow, evaluation report, ONNX export
-- [x] Inference API with prediction history
-- [x] Web frontend for uploading tiles and browsing results
-- [x] Tests with coverage for ml, api and web
-- [x] Docker Compose and CI
+## Limitations and future work
+
+- Only the RGB bands are used; the multispectral EuroSAT version (13 bands) would likely separate the crop classes better.
+- Tiles must be 64x64-ish patches; classifying a large scene would need a sliding-window tiler.
+- No auth on the API, so it's meant for local or internal use.
+- Possible next steps: quantize the ONNX model (int8) for even faster CPU inference, and add Grad-CAM heatmaps to the result card.
+
+## Acknowledgements
+
+EuroSAT: Helber, P., Bischke, B., Dengel, A., Borth, D. *EuroSAT: A Novel Dataset and Deep Learning Benchmark for Land Use and Land Cover Classification.* IEEE JSTARS, 2019. Sample tiles in `web/public/samples` come from its test split.
 
 ## License
 
