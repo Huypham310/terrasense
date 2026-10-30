@@ -63,10 +63,17 @@ export default function StatsPage() {
           <p className="py-16 text-center text-sm text-zinc-400">No predictions yet.</p>
         ) : (
           <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={chartData} margin={{ left: -10, bottom: 50 }}>
+            <BarChart data={chartData} margin={{ left: 10, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              {/* tên class dài nên xoay nghiêng cho đỡ đè nhau */}
-              <XAxis dataKey="name" angle={-35} textAnchor="end" interval={0} tick={{ fontSize: 12 }} />
+              {/* tên class dài nên xoay nghiêng cho đỡ đè nhau; height đủ cho "Herbaceous Vegetation" */}
+              <XAxis
+                dataKey="name"
+                angle={-35}
+                textAnchor="end"
+                interval={0}
+                height={90}
+                tick={{ fontSize: 12 }}
+              />
               <YAxis allowDecimals={false} />
               <Tooltip
                 formatter={(value, _name, item) => [
