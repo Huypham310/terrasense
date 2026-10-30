@@ -1,0 +1,7 @@
+node_modules
+.next
+coverage
+*.test.ts
+*.test.tsx
+.env*
+AGENTS.md
