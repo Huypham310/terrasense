@@ -54,7 +54,15 @@ curl -L -o artifacts/model.onnx https://github.com/Huypham310/terrasense/release
 curl -L -o artifacts/model_meta.json https://github.com/Huypham310/terrasense/releases/download/model-v1/model_meta.json
 ```
 
-On Windows PowerShell, `curl` works too (it's built into Windows 10+); use `mkdir artifacts` instead of `mkdir -p artifacts`.
+On Windows PowerShell, type `curl.exe` instead of `curl`: in Windows PowerShell 5.1 `curl` is an alias for `Invoke-WebRequest` and fails with "A parameter cannot be found that matches parameter name 'L'".
+
+```powershell
+mkdir artifacts
+curl.exe -L -o artifacts/model.onnx https://github.com/Huypham310/terrasense/releases/download/model-v1/model.onnx
+curl.exe -L -o artifacts/model_meta.json https://github.com/Huypham310/terrasense/releases/download/model-v1/model_meta.json
+```
+
+`artifacts/model.onnx` should be about 45 MB once downloaded.
 
 ### 2a. Option A: Docker (one command)
 
@@ -96,7 +104,7 @@ npm run dev
 5. The API is also usable on its own: interactive docs at http://localhost:8000/docs, or
 
 ```bash
-curl -F "file=@web/public/samples/River.jpg" http://localhost:8000/predict
+curl -F "file=@web/public/samples/River.jpg" http://localhost:8000/predict      # curl.exe on Windows PowerShell
 ```
 
 ### Retraining the model (optional)
