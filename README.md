@@ -38,16 +38,88 @@ flowchart LR
 | `api/` | Inference service with prediction history | FastAPI, ONNX Runtime, SQLAlchemy, PostgreSQL |
 | `web/` | Upload, history and stats pages | Next.js (App Router), TypeScript, Tailwind, Recharts |
 
-## Quick start (Docker)
+## How to run
+
+You don't need to train anything: the trained model is attached to the [model-v1 release](https://github.com/Huypham310/terrasense/releases/tag/model-v1).
+
+**Requirements**: Git, plus either Docker Desktop (option A) or Python 3.11+ and Node.js 20.9+ (option B).
+
+### 1. Get the code and the model
 
 ```bash
+git clone https://github.com/Huypham310/terrasense.git
+cd terrasense
 mkdir -p artifacts
 curl -L -o artifacts/model.onnx https://github.com/Huypham310/terrasense/releases/download/model-v1/model.onnx
 curl -L -o artifacts/model_meta.json https://github.com/Huypham310/terrasense/releases/download/model-v1/model_meta.json
+```
+
+On Windows PowerShell, `curl` works too (it's built into Windows 10+); use `mkdir artifacts` instead of `mkdir -p artifacts`.
+
+### 2a. Option A: Docker (one command)
+
+```bash
 docker compose up --build
 ```
 
-This starts Postgres, the API on http://localhost:8000 (docs at `/docs`) and the web app on http://localhost:3000. The web image uses Next.js standalone output.
+This starts Postgres, the API on http://localhost:8000 and the web app on http://localhost:3000. Stop everything with `docker compose down` (add `-v` to also delete the prediction history).
+
+### 2b. Option B: run locally without Docker
+
+No Postgres needed: the API falls back to a local SQLite file. Use two terminals from the repo root.
+
+Terminal 1, the API:
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate            # Windows
+# source .venv/bin/activate       # macOS / Linux
+pip install -r api/requirements.txt
+cd api
+uvicorn app.main:app --port 8000
+```
+
+Terminal 2, the web app:
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+### 3. Use it
+
+1. Open http://localhost:3000.
+2. Drop a satellite tile (PNG/JPEG/TIFF/WebP) on the upload box, or click one of the 10 sample tiles under it. The predicted land-use class and the top-3 probabilities show up on the right.
+3. **History** lists every prediction (filter by class, page through, delete rows).
+4. **Stats** shows how many tiles were classified per class, average latency, and the model's test accuracy.
+5. The API is also usable on its own: interactive docs at http://localhost:8000/docs, or
+
+```bash
+curl -F "file=@web/public/samples/River.jpg" http://localhost:8000/predict
+```
+
+### Retraining the model (optional)
+
+Takes about 10 minutes on a laptop CPU, see [Dataset](#dataset) and [Training](#training) for details:
+
+```bash
+pip install -e "ml[dev]"
+cd ml
+python -m terrasense.data.prepare
+python -m terrasense.train --model resnet18 --epochs 8 --lr 5e-4
+python -m terrasense.evaluate --model resnet18
+python -m terrasense.export --model resnet18   # writes artifacts/model.onnx + model_meta.json
+```
+
+### Troubleshooting
+
+| Symptom | Fix |
+| --- | --- |
+| Web app says "Can't reach the API" | The API isn't running on port 8000, or `NEXT_PUBLIC_API_URL` points elsewhere |
+| `/predict` returns 503 "Model is not loaded" | `artifacts/model.onnx` or `artifacts/model_meta.json` is missing; redo step 1 and restart the API |
+| `/health` shows `"database": false` | With Docker, wait for the `db` container to become healthy; locally, check `TERRASENSE_DATABASE_URL` |
+| Port 3000 or 8000 already in use | Stop the other process, or run `uvicorn ... --port 8001` and set `NEXT_PUBLIC_API_URL=http://localhost:8001` |
 
 ## Dataset
 
