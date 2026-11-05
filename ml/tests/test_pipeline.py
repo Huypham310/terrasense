@@ -10,7 +10,7 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
-from terrasense import evaluate, export, tracking
+from terrasense import evaluate, export, quantize, tracking
 from terrasense import train as train_module
 from terrasense.config import TrainConfig
 from terrasense.data.loaders import DataBundle, TransformSubset
@@ -94,3 +94,27 @@ def test_export_matches_torch(isolated):
     saved = json.loads((isolated / "artifacts" / "model_meta.json").read_text())
     assert saved["image_size"] == 64
     assert saved["class_names"][0] == "AnnualCrop"
+
+
+def test_quantize_static_int8_is_smaller_and_agrees(isolated, monkeypatch):
+    cfg = TrainConfig(
+        model="simple_cnn", epochs=1, output_dir=isolated / "artifacts", num_workers=0
+    )
+    train_module.train(cfg, patience=5)
+    export.export_onnx("simple_cnn")
+
+    monkeypatch.setattr(quantize, "ARTIFACTS_DIR", isolated / "artifacts")
+    monkeypatch.setattr(quantize, "REPORTS_DIR", isolated / "reports")
+    monkeypatch.setattr(quantize, "build_dataloaders", evaluate.build_dataloaders)
+    (isolated / "reports").mkdir(exist_ok=True)
+    quantize.main(["--calib-images", "20", "--runs", "5"])
+
+    report = json.loads((isolated / "reports" / "quantization.json").read_text())
+    rows = report["variants"]
+    assert set(rows) == {"fp32", "int8_dynamic", "int8_static"}
+    assert report["test_images"] == 20
+    # int8 weights: roughly 4x smaller than fp32 (graph overhead keeps it from exactly 4x)
+    assert rows["int8_static"]["size_mb"] < rows["fp32"]["size_mb"] / 2.5
+    assert rows["int8_static"]["agreement_with_fp32"] >= 0.8
+    assert (isolated / "artifacts" / "model_int8.onnx").exists()
+    assert not (isolated / "artifacts" / "model_prep.onnx").exists()  # temp file cleaned up
