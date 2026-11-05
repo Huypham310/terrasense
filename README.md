@@ -182,6 +182,31 @@ Transfer learning cuts the test error roughly in half. Most remaining mistakes a
 
 Full metrics, including per-class F1, are in `reports/<model>/metrics.json`.
 
+### INT8 quantization
+
+`python -m terrasense.quantize` quantizes the exported ResNet-18 with ONNX Runtime two ways and
+re-scores both on the same 2,700 test images (calibration uses 512 validation images, so the
+test split stays untouched):
+
+| Variant | Size | Test accuracy | Same prediction as fp32 | Latency, 1 image | Latency, batch of 32 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| fp32 (model-v1) | 44.8 MB | 98.19% | | 1.82 ms | 22.2 ms |
+| int8 dynamic | 11.3 MB | 98.22% | 99.63% | 19.8 ms | 626 ms |
+| **int8 static** (QDQ, per-channel) | **11.3 MB** | **98.11%** | **99.85%** | **1.35 ms** | **9.9 ms** |
+
+- **Static int8 is the one to ship:** 4x smaller, 1.35x faster for a single tile and 2.2x
+  faster for a batch of 32, for 0.08 points of accuracy (2 more mistakes out of 2,700).
+- **Dynamic quantization is a trap for CNNs.** It's the one-liner (`quantize_dynamic`) and it
+  shrinks the file just as much, but it quantizes activations at run time and turns every
+  convolution into ONNX Runtime's generic `ConvInteger` path, which is 11x slower at batch 1
+  and 28x slower at batch 32 than plain fp32 here. It's meant for Linear/LSTM-heavy models.
+- Per-channel weight scales matter for convolutions: each output filter gets its own range
+  instead of sharing the widest one.
+
+To serve the int8 model, point the API at it: `TERRASENSE_MODEL_PATH=artifacts/model_int8.onnx`
+(same `model_meta.json`, same preprocessing). Measured with onnxruntime 1.31 on a Ryzen AI 9 HX
+370 laptop; the numbers are in `reports/quantization.json`.
+
 ## API
 
 ```bash
