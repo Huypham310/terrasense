@@ -1,0 +1,29 @@
+{
+  "model": "resnet18",
+  "test_images": 2700,
+  "calibration_images": 512,
+  "onnxruntime": "1.31.1",
+  "variants": {
+    "fp32": {
+      "size_mb": 44.8,
+      "test_accuracy": 0.9819,
+      "agreement_with_fp32": 1.0,
+      "latency_ms_batch1": 1.824,
+      "latency_ms_batch32": 22.2
+    },
+    "int8_dynamic": {
+      "size_mb": 11.26,
+      "test_accuracy": 0.9822,
+      "agreement_with_fp32": 0.9963,
+      "latency_ms_batch1": 19.849,
+      "latency_ms_batch32": 625.92
+    },
+    "int8_static": {
+      "size_mb": 11.34,
+      "test_accuracy": 0.9811,
+      "agreement_with_fp32": 0.9985,
+      "latency_ms_batch1": 1.345,
+      "latency_ms_batch32": 9.91
+    }
+  }
+}
