@@ -98,7 +98,7 @@ npm run dev
 ### 3. Use it
 
 1. Open http://localhost:3000.
-2. Drop a satellite tile (PNG/JPEG/TIFF/WebP) on the upload box, or click one of the 10 sample tiles under it. The predicted land-use class and the top-3 probabilities show up on the right.
+2. Drop one or more satellite tiles (PNG/JPEG/TIFF/WebP, up to 16) on the upload box, or click one of the 10 sample tiles under it. A single tile shows the top-3 probabilities; several tiles call `/predict/batch` and render a results grid.
 3. **History** lists every prediction (filter by class, page through, delete rows).
 4. **Stats** shows how many tiles were classified per class, average latency, and the model's test accuracy.
 5. The API is also usable on its own: interactive docs at http://localhost:8000/docs, or
