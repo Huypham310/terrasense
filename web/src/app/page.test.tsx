@@ -1,11 +1,11 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { ApiError, predict, type Prediction } from "@/lib/api";
+import { ApiError, predict, predictBatch, type Prediction } from "@/lib/api";
 import ClassifyPage from "./page";
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api")>();
-  return { ...actual, predict: vi.fn() };
+  return { ...actual, predict: vi.fn(), predictBatch: vi.fn() };
 });
 
 const river: Prediction = {
@@ -23,6 +23,15 @@ const river: Prediction = {
   created_at: "2026-10-28T04:15:00Z",
 };
 
+const forest: Prediction = {
+  ...river,
+  id: 2,
+  filename: "Forest.jpg",
+  label: "Forest",
+  confidence: 0.81,
+  top_k: [{ label: "Forest", probability: 0.81 }],
+};
+
 beforeEach(() => {
   // sample tiles are fetched from /public before being sent to the API
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ blob: async () => new Blob(["jpg"]) }));
@@ -35,6 +44,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.mocked(predict).mockReset();
+  vi.mocked(predictBatch).mockReset();
 });
 
 it("classifies a sample tile and shows the result", async () => {
@@ -45,6 +55,7 @@ it("classifies a sample tile and shows the result", async () => {
 
   expect(await screen.findByText(/90\.8% confident/)).toBeDefined();
   expect(predict).toHaveBeenCalledWith(expect.any(Blob), "River.jpg");
+  expect(predictBatch).not.toHaveBeenCalled();
 });
 
 it("shows the API error message", async () => {
@@ -66,4 +77,25 @@ it("classifies an uploaded file", async () => {
 
   expect(await screen.findByText(/90\.8% confident/)).toBeDefined();
   expect(predict).toHaveBeenCalledWith(file, "my_tile.png");
+});
+
+it("sends several files through /predict/batch and shows a results grid", async () => {
+  vi.mocked(predictBatch).mockResolvedValue([river, forest]);
+  const { container } = render(<ClassifyPage />);
+  const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+  const files = [
+    new File(["a"], "River.jpg", { type: "image/jpeg" }),
+    new File(["b"], "Forest.jpg", { type: "image/jpeg" }),
+  ];
+
+  fireEvent.change(input, { target: { files } });
+
+  expect(await screen.findByText("River")).toBeDefined();
+  expect(await screen.findByText("Forest")).toBeDefined();
+  expect(predictBatch).toHaveBeenCalledTimes(1);
+  const arg = vi.mocked(predictBatch).mock.calls[0][0];
+  expect(arg).toHaveLength(2);
+  expect(arg[0].filename).toBe("River.jpg");
+  expect(arg[1].filename).toBe("Forest.jpg");
+  expect(predict).not.toHaveBeenCalled();
 });

@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { API_URL, ApiError, deletePrediction, listPredictions, predict } from "./api";
+import {
+  API_URL,
+  ApiError,
+  deletePrediction,
+  listPredictions,
+  predict,
+  predictBatch,
+} from "./api";
 
 function mockFetch(response: Partial<Response> | Error) {
   const fn =
@@ -24,6 +31,18 @@ describe("api client", () => {
     expect(url).toBe(`${API_URL}/predict`);
     expect(init.method).toBe("POST");
     expect((init.body as FormData).get("file")).toBeInstanceOf(Blob);
+  });
+
+  it("sends several files under the `files` field", async () => {
+    const fetch = mockFetch({ json: async () => [{ id: 1 }, { id: 2 }] });
+    await predictBatch([
+      { blob: new Blob(["a"], { type: "image/png" }), filename: "a.png" },
+      { blob: new Blob(["b"], { type: "image/png" }), filename: "b.png" },
+    ]);
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe(`${API_URL}/predict/batch`);
+    const form = init.body as FormData;
+    expect(form.getAll("files")).toHaveLength(2);
   });
 
   it("builds the history query string", async () => {
