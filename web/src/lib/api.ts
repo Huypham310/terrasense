@@ -71,6 +71,15 @@ export function predict(file: Blob, filename: string): Promise<Prediction> {
   return request<Prediction>("/predict", { method: "POST", body: form });
 }
 
+/** Classify several tiles in one ONNX call. FastAPI expects the field name `files`. */
+export function predictBatch(
+  files: { blob: Blob; filename: string }[],
+): Promise<Prediction[]> {
+  const form = new FormData();
+  for (const f of files) form.append("files", f.blob, f.filename);
+  return request<Prediction[]>("/predict/batch", { method: "POST", body: form });
+}
+
 export function listPredictions(params: { limit: number; offset: number; label?: string }) {
   const query = new URLSearchParams({ limit: String(params.limit), offset: String(params.offset) });
   if (params.label) query.set("label", params.label);
